@@ -1,0 +1,78 @@
+apply plugin: 'com.android.application'
+
+//task nativeLibsToJar(type: Zip, description: "create a jar archive of the native libs") {
+//    destinationDir file("$projectDir/libs")
+//    baseName "Native_Libs2"
+//    extension "jar"
+//    from fileTree(dir: "libs", include: "**/*.so")
+//    into "lib"
+//}
+//
+//tasks.withType(JavaCompile) {
+//    compileTask -> compileTask.dependsOn(nativeLibsToJar)
+//}
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.2"
+
+    signingConfigs {
+        signing {
+            storeFile file("key_store.jks")
+            storePassword 'tarlwa'
+            keyAlias 'android'
+            keyPassword 'tarlwa'
+        }
+    }
+
+    sourceSets {
+        main {
+            jniLibs.srcDir 'libs'
+        }
+    }
+
+    defaultConfig {
+        applicationId "lite.navi"
+        minSdkVersion 19
+        targetSdkVersion 22
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.signing
+            debuggable true
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+
+        release {
+            signingConfig signingConfigs.signing
+            debuggable true
+            minifyEnabled true
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    packagingOptions {
+        exclude 'META-INF/LGPL2.1'
+        exclude 'META-INF/LICENSE'
+        exclude 'META-INF/NOTICE'
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            File f = output.outputFile
+            String name = String.format("Navi_v%s.apk",
+                    defaultConfig.versionName);
+            output.outputFile = new File(f.getParentFile(), name)
+        }
+    }
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    compile 'org.apmem.tools:layouts:1.10@aar'
+    compile 'in.srain.cube:ptr-load-more:1.0.4'
+}
