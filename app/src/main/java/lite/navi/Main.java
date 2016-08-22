@@ -1,11 +1,17 @@
 package lite.navi;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.res.AssetManager;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Rect;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -13,6 +19,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -23,12 +30,16 @@ import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
 import com.baidu.mapapi.map.BaiduMap;
 import com.baidu.mapapi.map.BitmapDescriptorFactory;
+import com.baidu.mapapi.map.FileTileProvider;
 import com.baidu.mapapi.map.MapStatus;
 import com.baidu.mapapi.map.MapStatusUpdateFactory;
 import com.baidu.mapapi.map.Marker;
 import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.MyLocationData;
 import com.baidu.mapapi.map.TextureMapView;
+import com.baidu.mapapi.map.Tile;
+import com.baidu.mapapi.map.TileOverlay;
+import com.baidu.mapapi.map.TileOverlayOptions;
 import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.model.LatLngBounds;
 import com.baidu.mapapi.search.core.PoiInfo;
@@ -36,8 +47,23 @@ import com.baidu.navisdk.adapter.BNOuterLogUtil;
 import com.baidu.navisdk.adapter.BNRoutePlanNode;
 import com.baidu.navisdk.adapter.BNaviSettingManager;
 import com.baidu.navisdk.adapter.BaiduNaviManager;
+import com.esri.android.map.DynamicLayer;
+import com.esri.android.map.GraphicsLayer;
+import com.esri.android.map.MapView;
+import com.esri.android.map.ags.ArcGISDynamicMapServiceLayer;
+import com.esri.android.map.ags.ArcGISTiledMapServiceLayer;
+import com.esri.android.map.event.OnStatusChangedListener;
+import com.esri.core.geometry.GeometryEngine;
+import com.esri.core.geometry.Point;
+import com.esri.core.geometry.SpatialReference;
+import com.esri.core.map.Graphic;
+import com.esri.core.symbol.SimpleMarkerSymbol;
+import com.zhiyu.mirror.GpsTestActivity;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -50,7 +76,8 @@ import lite.navi.view.Utils;
 public class Main extends Activity implements
         BDLocationListener, View.OnClickListener,
         BaiduMap.OnMarkerClickListener,
-        LocationListener, BaiduNaviManager.RoutePlanListener {
+        LocationListener,
+        BaiduNaviManager.RoutePlanListener {
     private static final String TAG = "Main";
 
     private static final int SEARCH_ACTION = 1;
@@ -61,12 +88,31 @@ public class Main extends Activity implements
     private BDLocation mLastLocation;
     private TextView mSearch;
     private ImageView mIcon;
+    private MyTileProvider mTileProvider;
 
     private Dialog mWaitingDialog;
+
+    private static final int MODE_NORMAL = 0;
+    private static final int MODE_TRACE = 1;
+    private int mMode = MODE_NORMAL;
+
+    private MapView mArcMap;
+    private GraphicsLayer mGraphicsLayer;
+    private SimpleMarkerSymbol mDot;
+    private int mLocMarker = -1;
+    private TextView mTraceButton;
+
+    private Location mArcMapLocation;
+    private Point mLastDot;
+    private boolean isTracing = true;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
+        findViewById(R.id.tv_settings).setOnClickListener(this);
+        findViewById(R.id.iv_settings).setOnClickListener(this);
+
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mMapView = (TextureMapView) findViewById(R.id.bmapView);
         mMap = mMapView.getMap();
         mMap.setOnMarkerClickListener(this);
@@ -79,6 +125,13 @@ public class Main extends Activity implements
         // 开启定位图层
         mMap.setMyLocationEnabled(true);
         mMap.setMaxAndMinZoomLevel(19, 3);
+        mMap.setOnMapLoadedCallback(new BaiduMap.OnMapLoadedCallback() {
+            @Override
+            public void onMapLoaded() {
+                mMap.setOnMapLoadedCallback(null);
+                addTileLayer();
+            }
+        });
 
         // 定位初始化
         mLocClient = new LocationClient(this);
@@ -86,10 +139,11 @@ public class Main extends Activity implements
         LocationClientOption option = new LocationClientOption();
         option.setOpenGps(true); // 打开gps
         option.setCoorType("bd09ll"); // 设置坐标类型
+        option.setNeedDeviceDirect(true);
+        option.setIsNeedAddress(true);
         option.setScanSpan(1000);
         mLocClient.setLocOption(option);
 
-//        registerLocListener();
         BNOuterLogUtil.setLogSwitcher(true);
         File dir = Environment.getExternalStorageDirectory();
         String name = getResources().getString(R.string.app_name);
@@ -99,13 +153,54 @@ public class Main extends Activity implements
                     dir.toString(), name,
                     mNaviInitListener, null, null, null);
         }
+
+        mArcMap = (MapView) findViewById(R.id.arc_map);
+        findViewById(R.id.mode).setOnClickListener(this);
+        findViewById(R.id.reset).setOnClickListener(this);
+        mTraceButton = (TextView) findViewById(R.id.trace);
+        mTraceButton.setOnClickListener(this);
+        mTraceButton.setActivated(isTracing);
+
+        ArcGISTiledMapServiceLayer base = new ArcGISTiledMapServiceLayer(
+//                "http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer");
+                "http://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer");
+        mArcMap.addLayer(base);
+                //Envelope [m_envelope=Envelope2D [xmin=114.3272189510811, ymin=30.542809291954995, xmax=114.34153905102028, ymax=30.56307135368746], m_attributes=null]
+//        DynamicLayer dl = new ArcGISDynamicMapServiceLayer("http://121.40.231.209:6080/arcgis/rest/services/MiddleNorthRoad/MapServer");
+        DynamicLayer dl = new ArcGISDynamicMapServiceLayer("http://121.40.231.209:6080/arcgis/rest/services/TMRITest/MapServer");
+        mArcMap.addLayer(dl);
+        mGraphicsLayer = new GraphicsLayer();
+        mArcMap.addLayer(mGraphicsLayer);
+        float size = getResources().getDisplayMetrics().density*5;
+        mDot = new SimpleMarkerSymbol(Color.RED, (int)size,
+                SimpleMarkerSymbol.STYLE.CIRCLE);
+
+        mArcMap.setOnStatusChangedListener(new OnStatusChangedListener() {
+            @Override
+            public void onStatusChanged(Object o, STATUS status) {
+                if(status == STATUS.INITIALIZED) {
+                    mArcMap.setScale(5000);
+                    double x = (114.3272189510811 + 114.34153905102028)/2;
+                    double y = (30.542809291954995 + 30.56307135368746)/2;
+                    Point pt = GeometryEngine.project(x, y, mArcMap.getSpatialReference());
+                    mArcMap.centerAt(pt, false);
+                    mArcMap.setOnStatusChangedListener(null);
+                    SimpleMarkerSymbol blueDot = new SimpleMarkerSymbol(Color.BLUE,
+                            (int)mDot.getSize(),
+                            SimpleMarkerSymbol.STYLE.CIRCLE);
+                    mLocMarker = mGraphicsLayer.addGraphic(new Graphic(pt, blueDot));
+                    mGraphicsLayer.updateGraphic(mLocMarker, mGraphicsLayer.getMaxDrawOrder() + 1);
+                }
+            }
+        });
     }
 
     private void registerLocListener() {
         LocationManager locMgr = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        for(String p : locMgr.getAllProviders()) {
-            locMgr.requestLocationUpdates(p, 1000, 0, this);
-        }
+//        for(String p : locMgr.getAllProviders()) {
+//            locMgr.requestLocationUpdates(p, 1000, 0, this);
+//        }
+        locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER,1000, 0, this);
     }
 
     private void unregisterLocListener() {
@@ -147,6 +242,13 @@ public class Main extends Activity implements
     public void onClick(View v) {
         switch (v.getId()) {
             case R.id.locate:
+                if(mMode == MODE_TRACE) {
+                    if(mArcMapLocation != null){
+                        mArcMap.centerAt(mArcMapLocation.getLatitude(),
+                                mArcMapLocation.getLongitude(), true);
+                    }
+                    return;
+                }
                 if(mLastLocation == null)
                     return;
                 moveToLocation(mLastLocation, -1);
@@ -165,6 +267,34 @@ public class Main extends Activity implements
                     intent = new Intent(this, Search.class);
                     startActivityForResult(intent, SEARCH_ACTION);
                 }
+                break;
+            case R.id.mode:
+                AlertDialog.Builder builder = new AlertDialog.Builder(this);
+                builder.setSingleChoiceItems(new String[]{"百度地图", "ArcGIS地图"},
+                        mMode == MODE_NORMAL ? 0 : 1,
+                        new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                                if(which == 0 ^ mMode == MODE_NORMAL) {
+                                    setMode(which == 0 ? MODE_NORMAL : MODE_TRACE);
+                                }
+                            }
+                        });
+                builder.create().show();
+                break;
+            case R.id.reset:
+                clearDots();
+                break;
+            case R.id.trace:
+                isTracing = !isTracing;
+                mTraceButton.setActivated(isTracing);
+                break;
+            case R.id.iv_settings:
+            case R.id.tv_settings:
+                intent = new Intent(this, GpsTestActivity.class);
+                startActivity(intent);
+                break;
         }
     }
 
@@ -219,6 +349,16 @@ public class Main extends Activity implements
         super.onPause();
         mMapView.onPause();
         mLocClient.stop();
+        if(mMode == MODE_TRACE)
+            unregisterLocListener();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(mWaitingDialog != null && mWaitingDialog.isShowing()) {
+            mWaitingDialog.dismiss();
+        }
     }
 
     @Override
@@ -226,6 +366,8 @@ public class Main extends Activity implements
         super.onResume();
         mMapView.onResume();
         mLocClient.start();
+        if(mMode == MODE_TRACE)
+            registerLocListener();
     }
 
     @Override
@@ -237,7 +379,11 @@ public class Main extends Activity implements
         mMap.setMyLocationEnabled(false);
         mMapView.onDestroy();
 
-        unregisterLocListener();
+        if(mTileProvider != null) {
+            mTileProvider.mTile.recycle();
+            mTileProvider.mBitmap.recycle();
+            mTileProvider = null;
+        }
         ((App)getApplication()).mLocation = null;
     }
 
@@ -258,7 +404,45 @@ public class Main extends Activity implements
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.d("Prvd", "GotLoc");
+        if(lite.navi.Utils.isBetterLocation(location, mArcMapLocation)) {
+            moveToLocationOnArcMap(location);
+        }
+    }
+
+    private void moveToLocationOnArcMap(Location location) {
+        final double y = location.getLatitude();
+        final double x = location.getLongitude();
+
+        SpatialReference sr = mArcMap.getSpatialReference();
+        Point pt = GeometryEngine.project(x, y, sr);
+        if(mLocMarker != -1) {
+            mGraphicsLayer.updateGraphic(mLocMarker, pt);
+        }
+
+        if(mArcMapLocation == null) {
+            mArcMap.centerAt(y, x, true);
+        }
+
+        if(!isTracing) {
+
+            mArcMapLocation = location;
+            return;
+        }
+//        mArcMap.centerAt(y, x, true);
+
+        if(mLastDot == null || mArcMapLocation == null) {
+            mLastDot = pt;
+        } else {
+            pt = GeometryEngine.project(mArcMapLocation.getLongitude(),
+                    mArcMapLocation.getLatitude(), sr);
+            double distance = GeometryEngine.geodesicDistance(mLastDot, pt, sr, null);
+            Log.d("DIS:", distance + "");
+            if (distance > 10) {
+                mGraphicsLayer.addGraphic(new Graphic(pt, mDot));
+                mLastDot = pt;
+            }
+        }
+        mArcMapLocation = location;
     }
 
     @Override
@@ -326,7 +510,7 @@ public class Main extends Activity implements
 
     @Override
     public void onJumpToNavigator() {
-        dismissWaitingDialog();
+//        dismissWaitingDialog();
         Intent intent = new Intent(this, Navi.class);
         startActivity(intent);
     }
@@ -335,5 +519,189 @@ public class Main extends Activity implements
     public void onRoutePlanFailed() {
         dismissWaitingDialog();
         Toast.makeText(this, "路径规划失败", Toast.LENGTH_SHORT).show();
+    }
+
+    private void addTileLayer() {
+        mTileProvider = new MyTileProvider();
+        TileOverlayOptions options = new TileOverlayOptions();
+        // 构造显示瓦片图范围，当前为世界范围
+        LatLng northeast = new LatLng(MyTileProvider.LAT_MAX, MyTileProvider.LON_MAX);
+        LatLng southwest = new LatLng(MyTileProvider.LAT_MIN, MyTileProvider.LON_MIN);
+        // 设置离线瓦片图属性option
+        options.tileProvider(mTileProvider)
+                .setPositionFromBounds(new LatLngBounds.Builder().include(northeast).include(southwest).build());
+        // 通过option指定相关属性，向地图添加离线瓦片图对象
+        TileOverlay tileOverlay = mMap.addTileLayer(options);
+        mMap.setMaxAndMinZoomLevel(19, 3);
+    }
+
+    private void setMode(int mode) {
+        if(mode == mMode)
+            return;
+        switch (mode) {
+            case MODE_NORMAL:
+                unregisterLocListener();
+                ((View)mArcMap.getParent()).setVisibility(View.GONE);
+                mArcMapLocation = null;
+                break;
+            case MODE_TRACE:
+                registerLocListener();
+                ((View)mArcMap.getParent()).setVisibility(View.VISIBLE);
+                clearDots();
+                break;
+        }
+        mMode = mode;
+    }
+
+    private void clearDots() {
+        int[] ids = mGraphicsLayer.getGraphicIDs();
+        if(ids != null) {
+            Log.d("ARC", "Clear " + (ids.length - 1));
+            for(int id : ids) {
+                if(id != mLocMarker)
+                    mGraphicsLayer.removeGraphic(id);
+            }
+        }
+    }
+
+    class MyTileProvider extends FileTileProvider {
+
+        final static int SIZE = 256;
+        final static int LEVEL = 19;
+        final static int X_MIN = 12728316*2;
+        final static int X_MAX = 12729906*2;
+        final static int Y_MIN = 3552073*2;
+        final static int Y_MAX = 3554712*2;
+        final static int W = X_MAX - X_MIN;
+        final static int H = Y_MAX - Y_MIN;
+
+        final static double LAT_MAX = 30.567009;
+        final static double LAT_MIN = 30.546484;
+        final static double LON_MAX = 114.353699;
+        final static double LON_MIN = 114.339119;
+
+        Bitmap mBitmap, mTile;
+        Canvas mCanvas;
+        Rect mSrc = new Rect();
+        Rect mDst = new Rect(0, 0, SIZE, SIZE);
+
+        public MyTileProvider() {
+            AssetManager am = getAssets();
+            try {
+                InputStream is = am.open("L19.png");
+                mBitmap = BitmapFactory.decodeStream(is);
+                is.close();
+                mTile = Bitmap.createBitmap(SIZE, SIZE, Bitmap.Config.ARGB_8888);
+                mCanvas = new Canvas(mTile);
+            }
+            catch (IOException e) {
+                //never happen
+            }
+        }
+
+        @Override
+        public Tile getTile(int x, int y, int z) {
+            if(z < 16)
+                return null;
+            int scale = (int)Math.pow(2, LEVEL - z);
+            Rect src = mSrc;
+            Rect dst = mDst;
+            final int STRIDE = SIZE*scale;
+            src.set(x*STRIDE, y*STRIDE, (x + 1)*STRIDE, (y + 1)*STRIDE);
+
+            int result = getOverlap(src, dst, scale);
+            if(result == -1) {
+                return null;
+            }
+
+            mTile.eraseColor(0);
+            mCanvas.drawBitmap(mBitmap, src, dst, null);
+            ByteBuffer buffer = ByteBuffer.allocate(256
+                    * 256 * 4);
+            mTile.copyPixelsToBuffer(buffer);
+            byte[] data = buffer.array();
+            buffer.clear();
+            return new Tile(256, 256, data);
+        }
+
+        private boolean getSrc(Rect src) {
+            if(src.left >= X_MIN && src.right <= X_MAX &&
+                    src.top >= Y_MIN && src.bottom <= Y_MAX) {
+                src.left = src.left - X_MIN;
+                src.right = src.right - X_MIN;
+                int t = src.top;
+                src.top = Y_MAX - src.bottom;
+                src.bottom = Y_MAX - t;
+                return true;
+            }
+
+            return false;
+        }
+
+        private int getOverlap(Rect src, Rect dst, int scale) {
+            if(src.left >= X_MAX)
+                return -1;
+            if(src.right <= X_MIN)
+                return -1;
+            if(src.top >= Y_MAX)
+                return -1;
+            if(src.bottom <= Y_MIN)
+                return -1;
+            int result = 4;
+            if(src.right > X_MAX) {
+                result--;
+                dst.right = (X_MAX - src.left)/scale;
+                src.right = W;
+            }
+            else {
+                dst.right = SIZE;
+                src.right = src.right - X_MIN;
+            }
+
+            if(src.left < X_MIN) {
+                result--;
+                dst.left = (X_MIN - src.left)/scale;
+                src.left = 0;
+            }
+            else {
+                src.left = src.left - X_MIN;
+                dst.left = 0;
+            }
+
+            int b;
+            if(src.top < Y_MIN) {
+                result--;
+                dst.bottom = (src.bottom - Y_MIN)/scale;
+                b = H;
+            }
+            else {
+                dst.bottom = SIZE;
+                b = Y_MAX - src.top;
+            }
+
+            if(src.bottom > Y_MAX) {
+                result--;
+                dst.top = (src.bottom - Y_MAX)/scale;
+                src.top = 0;
+            }
+            else {
+                dst.top = 0;
+                src.top = Y_MAX - src.bottom;
+            }
+
+            src.bottom = b;
+
+            return result;
+        }
+
+        @Override
+        public int getMaxDisLevel() {
+            return LEVEL;
+        }
+
+        @Override
+        public int getMinDisLevel() {
+            return 16;
+        }
     }
 }

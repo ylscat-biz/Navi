@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,21 +13,20 @@ import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.BaseAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.baidu.location.BDLocation;
-import com.baidu.mapapi.model.LatLng;
 import com.baidu.mapapi.search.core.PoiInfo;
 import com.baidu.mapapi.search.core.SearchResult;
 import com.baidu.mapapi.search.poi.OnGetPoiSearchResultListener;
+import com.baidu.mapapi.search.poi.PoiCitySearchOption;
 import com.baidu.mapapi.search.poi.PoiDetailResult;
 import com.baidu.mapapi.search.poi.PoiIndoorResult;
-import com.baidu.mapapi.search.poi.PoiNearbySearchOption;
 import com.baidu.mapapi.search.poi.PoiResult;
 import com.baidu.mapapi.search.poi.PoiSearch;
-import com.baidu.mapapi.search.poi.PoiSortType;
 
 import org.apmem.tools.layouts.FlowLayout;
 
@@ -57,6 +55,7 @@ public class Search extends Activity implements
     private static final int MAX_HISTORY_COUNT = 10;
 
     private AutoCompleteTextView mInput;
+    private EditText mCityInput;
     private ArrayList<String> mHistory;
     private HashSet<String> mExcludes = new HashSet<>();
     private FlowLayout mHistoryPanel;
@@ -68,7 +67,7 @@ public class Search extends Activity implements
     private Adapter mAdapter;
 
     private PoiSearch mPoiSearch;
-    private String mKey;
+    private String mKey, mCity;
     private int mPage, mMaxPage;
 
     @Override
@@ -125,6 +124,11 @@ public class Search extends Activity implements
 
         mInput = (AutoCompleteTextView) findViewById(R.id.input);
         mInput.setOnEditorActionListener(this);
+        mCityInput = (EditText) findViewById(R.id.city);
+        BDLocation location = ((App)getApplication()).mLocation;
+        if(location != null) {
+            mCityInput.setText(location.getCity());
+        }
         mHistory = getHistory();
         for(int i = mHistory.size() - 1; i >= 0; i--)
             showHistoryItems(mHistory.get(i));
@@ -134,6 +138,11 @@ public class Search extends Activity implements
     }
 
     private void search() {
+        String city = mCityInput.getText().toString().trim();
+        if(TextUtils.isEmpty(city)) {
+            Toast.makeText(this, "请输入城市", Toast.LENGTH_SHORT).show();
+            return;
+        }
         String key = mInput.getText().toString().trim();
         mInput.dismissDropDown();
         if(TextUtils.isEmpty(key)) {
@@ -143,19 +152,16 @@ public class Search extends Activity implements
         if(key.equals(mKey))
             return;
         mKey = key;
+        mCity = city;
         mMaxPage = 0;
         mPage = 0;
-        BDLocation location = ((App)getApplication()).mLocation;
-        if(location == null)
-            return;
-        PoiNearbySearchOption option = new PoiNearbySearchOption()
-                .location(new LatLng(location.getLatitude(), location.getLongitude()))
-                .keyword(key)
-                .radius(100000)
-                .sortType(PoiSortType.distance_from_near_to_far);
+
+        PoiCitySearchOption option = new PoiCitySearchOption()
+                .city(city)
+                .keyword(key);
 
         showWaitingDialog();
-        mPoiSearch.searchNearby(option);
+        mPoiSearch.searchInCity(option);
         mAdapter.mList.clear();
         if(mPtrLayout.getVisibility() == View.VISIBLE)
             mAdapter.notifyDataSetChanged();
@@ -165,13 +171,11 @@ public class Search extends Activity implements
         BDLocation location = ((App)getApplication()).mLocation;
         if(location == null)
             return;
-        PoiNearbySearchOption option = new PoiNearbySearchOption()
-                .location(new LatLng(location.getLatitude(), location.getLongitude()))
+        PoiCitySearchOption option = new PoiCitySearchOption()
+                .city(mCity)
                 .keyword(mKey)
-                .pageNum(++mPage)
-                .radius(100000)
-                .sortType(PoiSortType.distance_from_near_to_far);
-        mPoiSearch.searchNearby(option);
+                .pageNum(++mPage);
+        mPoiSearch.searchInCity(option);
     }
 
     private ArrayList<String> getHistory() {

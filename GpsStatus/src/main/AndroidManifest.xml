@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.zhiyu.mirror">
+
+    <uses-permission android:name="android.permission.ACCESS_GPS" />
+
+    <uses-feature
+            android:glEsVersion="0x00020000"
+            android:required="true"/>
+
+    <application>
+
+        <uses-library android:name="com.google.android.maps"/>
+
+        <activity android:name="com.zhiyu.mirror.GpsTestActivity"
+                  android:theme="@style/GpsSwitchTheme"
+                  android:screenOrientation="sensorLandscape"
+                  android:configChanges="screenSize|orientation">
+        </activity>
+
+    </application>
+</manifest>

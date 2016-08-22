@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:orientation="horizontal"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:id="@+id/large_screen_layout">
+    <fragment class="com.zhiyu.mirror.GpsStatusFragment"
+              android:id="@+id/gps_status_fragment"
+              android:layout_width="fill_parent"
+              android:layout_height="match_parent"
+              android:layout_weight="1"/>
+    <!--<fragment class="com.android.gpstest.GpsMapFragment"
+              android:id="@+id/gps_map_fragment"
+              android:layout_width="fill_parent"
+              android:layout_height="match_parent"
+              android:layout_weight="1"/>-->
+    <fragment class="com.zhiyu.mirror.GpsSkyFragment"
+              android:id="@+id/gps_sky_fragment"
+              android:layout_width="fill_parent"
+              android:layout_height="match_parent"
+              android:layout_weight="1"/>
+</LinearLayout>

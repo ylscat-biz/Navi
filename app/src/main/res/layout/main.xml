@@ -5,7 +5,7 @@
     android:baselineAligned="false">
 
     <LinearLayout
-        android:layout_width="150dp"
+        android:layout_width="120dp"
         android:layout_height="match_parent"
         android:background="@drawable/bg"
         android:orientation="vertical"
@@ -13,48 +13,50 @@
 
         <ImageView
             android:layout_width="match_parent"
-            android:layout_height="100dp"
+            android:layout_height="50dp"
             android:src="@drawable/pin" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="0px"
             android:layout_weight="1"
+            android:paddingTop="5dp"
             android:gravity="center_horizontal"
-            android:paddingTop="20dp"
             android:text="目的地"
             android:textColor="@android:color/white"
-            android:textSize="24dp" />
+            android:textSize="20dp" />
 
         <ImageView
             android:layout_width="match_parent"
-            android:layout_height="100dp"
+            android:layout_height="50dp"
             android:src="@drawable/group" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="0px"
             android:layout_weight="1"
+            android:paddingTop="5dp"
             android:gravity="center_horizontal"
-            android:paddingTop="20dp"
             android:text="群组导航"
             android:textColor="@android:color/white"
-            android:textSize="24dp" />
+            android:textSize="20dp" />
 
         <ImageView
+            android:id="@+id/iv_settings"
             android:layout_width="match_parent"
-            android:layout_height="100dp"
+            android:layout_height="50dp"
             android:src="@drawable/settings" />
 
         <TextView
+            android:id="@+id/tv_settings"
             android:layout_width="match_parent"
             android:layout_height="0px"
             android:layout_weight="1"
+            android:paddingTop="5dp"
             android:gravity="center_horizontal"
-            android:paddingTop="20dp"
             android:text="设置"
             android:textColor="@android:color/white"
-            android:textSize="24dp" />
+            android:textSize="20dp" />
     </LinearLayout>
 
     <FrameLayout
@@ -96,6 +98,49 @@
                 android:src="@drawable/search"/>
         </FrameLayout>
 
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone">
+
+            <com.esri.android.map.MapView
+                android:id="@+id/arc_map"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:background="@color/dark_blue">
+                <TextView
+                    android:id="@+id/trace"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textSize="18dp"
+                    android:text="显示轨迹"
+                    android:textColor="@color/button_text"
+                    android:padding="8dp"
+                    android:drawableLeft="@drawable/track"
+                    android:drawablePadding="5dp"
+                    android:background="@drawable/button"
+                    />
+                <TextView
+                    android:id="@+id/reset"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="16dp"
+                    android:textSize="18dp"
+                    android:text="清除轨迹"
+                    android:textColor="@color/button_text"
+                    android:padding="8dp"
+                    android:drawableLeft="@drawable/clear"
+                    android:drawablePadding="5dp"
+                    android:background="@drawable/button"
+                    />
+            </LinearLayout>
+        </FrameLayout>
+
         <ImageView
             android:id="@+id/locate"
             android:layout_width="wrap_content"
@@ -107,5 +152,15 @@
             android:clickable="true"
             android:padding="10dp"
             android:src="@drawable/dot" />
+        <ImageView
+            android:id="@+id/mode"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical|right"
+            android:layout_marginRight="10dp"
+            android:src="@drawable/mode"
+            android:background="@drawable/round_corner_button_dark"
+            android:clickable="true"
+            android:padding="10dp" />
     </FrameLayout>
 </LinearLayout>
