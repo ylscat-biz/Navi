@@ -6,6 +6,7 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.res.AssetManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -52,6 +53,7 @@ import com.esri.android.map.GraphicsLayer;
 import com.esri.android.map.MapView;
 import com.esri.android.map.ags.ArcGISDynamicMapServiceLayer;
 import com.esri.android.map.ags.ArcGISTiledMapServiceLayer;
+import com.esri.android.map.event.OnPanListener;
 import com.esri.android.map.event.OnStatusChangedListener;
 import com.esri.core.geometry.GeometryEngine;
 import com.esri.core.geometry.Point;
@@ -105,6 +107,7 @@ public class Main extends Activity implements
     private Location mArcMapLocation;
     private Point mLastDot;
     private boolean isTracing = true;
+    private boolean autoCenter = true;
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -171,7 +174,7 @@ public class Main extends Activity implements
         mArcMap.addLayer(dl);
         mGraphicsLayer = new GraphicsLayer();
         mArcMap.addLayer(mGraphicsLayer);
-        float size = getResources().getDisplayMetrics().density*5;
+        float size = getResources().getDisplayMetrics().density*15;
         mDot = new SimpleMarkerSymbol(Color.RED, (int)size,
                 SimpleMarkerSymbol.STYLE.CIRCLE);
 
@@ -179,18 +182,40 @@ public class Main extends Activity implements
             @Override
             public void onStatusChanged(Object o, STATUS status) {
                 if(status == STATUS.INITIALIZED) {
+                    SharedPreferences sp = getSharedPreferences("SP", MODE_PRIVATE);
                     mArcMap.setScale(5000);
-                    double x = (114.3272189510811 + 114.34153905102028)/2;
-                    double y = (30.542809291954995 + 30.56307135368746)/2;
+                    double x = sp.getFloat("position_x", (float)(114.3272189510811 + 114.34153905102028)/2);
+                    double y = sp.getFloat("position_y", (float)(30.542809291954995 + 30.56307135368746)/2);
                     Point pt = GeometryEngine.project(x, y, mArcMap.getSpatialReference());
                     mArcMap.centerAt(pt, false);
                     mArcMap.setOnStatusChangedListener(null);
-                    SimpleMarkerSymbol blueDot = new SimpleMarkerSymbol(Color.BLUE,
+                    SimpleMarkerSymbol blueDot = new SimpleMarkerSymbol(Color.RED,
                             (int)mDot.getSize(),
                             SimpleMarkerSymbol.STYLE.CIRCLE);
                     mLocMarker = mGraphicsLayer.addGraphic(new Graphic(pt, blueDot));
                     mGraphicsLayer.updateGraphic(mLocMarker, mGraphicsLayer.getMaxDrawOrder() + 1);
                 }
+            }
+        });
+        mArcMap.setOnPanListener(new OnPanListener() {
+            @Override
+            public void prePointerMove(float v, float v1, float v2, float v3) {
+
+            }
+
+            @Override
+            public void postPointerMove(float v, float v1, float v2, float v3) {
+
+            }
+
+            @Override
+            public void prePointerUp(float v, float v1, float v2, float v3) {
+
+            }
+
+            @Override
+            public void postPointerUp(float v, float v1, float v2, float v3) {
+                autoCenter = false;
             }
         });
     }
@@ -246,6 +271,7 @@ public class Main extends Activity implements
                     if(mArcMapLocation != null){
                         mArcMap.centerAt(mArcMapLocation.getLatitude(),
                                 mArcMapLocation.getLongitude(), true);
+                        autoCenter = true;
                     }
                     return;
                 }
@@ -385,6 +411,18 @@ public class Main extends Activity implements
             mTileProvider = null;
         }
         ((App)getApplication()).mLocation = null;
+        SharedPreferences sp = getSharedPreferences("SP", MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        if(mMode == MODE_TRACE && mArcMapLocation != null) {
+            editor.putFloat("position_x", (float)mArcMapLocation.getLongitude());
+            editor.putFloat("position_y", (float)mArcMapLocation.getLatitude());
+            editor.apply();
+        }
+        else if(mLastLocation != null) {
+            editor.putFloat("position_x", (float)mLastLocation.getLongitude());
+            editor.putFloat("position_y", (float)mLastLocation.getLatitude());
+            editor.apply();
+        }
     }
 
     private void showWaitingDialog() {
@@ -419,7 +457,7 @@ public class Main extends Activity implements
             mGraphicsLayer.updateGraphic(mLocMarker, pt);
         }
 
-        if(mArcMapLocation == null) {
+        if(mArcMapLocation == null || autoCenter) {
             mArcMap.centerAt(y, x, true);
         }
 
@@ -428,7 +466,7 @@ public class Main extends Activity implements
             mArcMapLocation = location;
             return;
         }
-//        mArcMap.centerAt(y, x, true);
+
 
         if(mLastDot == null || mArcMapLocation == null) {
             mLastDot = pt;

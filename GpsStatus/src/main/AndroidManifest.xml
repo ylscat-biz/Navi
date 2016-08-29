@@ -12,8 +12,6 @@
 
     <application>
 
-        <uses-library android:name="com.google.android.maps"/>
-
         <activity android:name="com.zhiyu.mirror.GpsTestActivity"
                   android:theme="@style/GpsSwitchTheme"
                   android:screenOrientation="sensorLandscape"
