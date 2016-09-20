@@ -13,6 +13,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Rect;
+import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -59,6 +60,8 @@ import com.esri.core.geometry.GeometryEngine;
 import com.esri.core.geometry.Point;
 import com.esri.core.geometry.SpatialReference;
 import com.esri.core.map.Graphic;
+import com.esri.core.symbol.PictureFillSymbol;
+import com.esri.core.symbol.PictureMarkerSymbol;
 import com.esri.core.symbol.SimpleMarkerSymbol;
 import com.zhiyu.mirror.GpsTestActivity;
 
@@ -189,10 +192,11 @@ public class Main extends Activity implements
                     Point pt = GeometryEngine.project(x, y, mArcMap.getSpatialReference());
                     mArcMap.centerAt(pt, false);
                     mArcMap.setOnStatusChangedListener(null);
-                    SimpleMarkerSymbol blueDot = new SimpleMarkerSymbol(Color.RED,
-                            (int)mDot.getSize(),
-                            SimpleMarkerSymbol.STYLE.CIRCLE);
-                    mLocMarker = mGraphicsLayer.addGraphic(new Graphic(pt, blueDot));
+                    Drawable d = getResources().getDrawable(R.drawable.loc_dot);
+                    assert d != null;
+                    d.setBounds(0, 0, d.getIntrinsicWidth(), d.getIntrinsicHeight());
+                    PictureMarkerSymbol symbol = new PictureMarkerSymbol(d);
+                    mLocMarker = mGraphicsLayer.addGraphic(new Graphic(pt, symbol));
                     mGraphicsLayer.updateGraphic(mLocMarker, mGraphicsLayer.getMaxDrawOrder() + 1);
                 }
             }

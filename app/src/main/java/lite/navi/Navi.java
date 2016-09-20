@@ -96,6 +96,7 @@ public class Navi extends Activity implements LocationListener{
                 "http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer");
 //                "http://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer");
         mArcMap.addLayer(base);
+        base.setVisible(false);
         //Envelope [m_envelope=Envelope2D [xmin=114.3272189510811, ymin=30.542809291954995, xmax=114.34153905102028, ymax=30.56307135368746], m_attributes=null]
         DynamicLayer dl = new ArcGISDynamicMapServiceLayer("http://121.40.231.209:6080/arcgis/rest/services/MiddleNorthRoad/MapServer");
         mArcMap.addLayer(dl);
@@ -155,8 +156,6 @@ public class Navi extends Activity implements LocationListener{
             Log.d("Prv", provider);
         }
         locMgr.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000, 0, this);
-        locMgr.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1000, 0, this);
-
     }
 
     private void unregisterLocListener() {
