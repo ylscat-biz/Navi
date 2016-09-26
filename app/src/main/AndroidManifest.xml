@@ -26,6 +26,7 @@
         android:name="App"
         android:supportsRtl="false"
         android:largeHeap="true"
+        android:icon="@drawable/pin"
         android:theme="@style/AppTheme">
 
         <meta-data
