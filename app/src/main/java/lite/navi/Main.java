@@ -104,12 +104,15 @@ public class Main extends Activity implements
     private MapView mArcMap;
     private GraphicsLayer mGraphicsLayer;
     private SimpleMarkerSymbol mDot;
+    //ArcGIS当前位置的图标序号
     private int mLocMarker = -1;
     private TextView mTraceButton;
 
     private Location mArcMapLocation;
     private Point mLastDot;
+    //是否显示轨迹
     private boolean isTracing = true;
+    //是否自动跟随
     private boolean autoCenter = true;
 
     protected void onCreate(Bundle savedInstanceState) {
@@ -131,6 +134,7 @@ public class Main extends Activity implements
         // 开启定位图层
         mMap.setMyLocationEnabled(true);
         mMap.setMaxAndMinZoomLevel(19, 3);
+        // 百度地图加载瓦片图
         mMap.setOnMapLoadedCallback(new BaiduMap.OnMapLoadedCallback() {
             @Override
             public void onMapLoaded() {
@@ -160,6 +164,7 @@ public class Main extends Activity implements
                     mNaviInitListener, null, null, null);
         }
 
+        //ArcGIS地图初始化
         mArcMap = (MapView) findViewById(R.id.arc_map);
         findViewById(R.id.mode).setOnClickListener(this);
         findViewById(R.id.reset).setOnClickListener(this);
@@ -167,17 +172,21 @@ public class Main extends Activity implements
         mTraceButton.setOnClickListener(this);
         mTraceButton.setActivated(isTracing);
 
+        //ArcGIS底图图层使用官方的卫星图
         ArcGISTiledMapServiceLayer base = new ArcGISTiledMapServiceLayer(
 //                "http://services.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer");
                 "http://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer");
         mArcMap.addLayer(base);
                 //Envelope [m_envelope=Envelope2D [xmin=114.3272189510811, ymin=30.542809291954995, xmax=114.34153905102028, ymax=30.56307135368746], m_attributes=null]
 //        DynamicLayer dl = new ArcGISDynamicMapServiceLayer("http://121.40.231.209:6080/arcgis/rest/services/MiddleNorthRoad/MapServer");
+        //高精图层
         DynamicLayer dl = new ArcGISDynamicMapServiceLayer("http://121.40.231.209:6080/arcgis/rest/services/TMRITest/MapServer");
         mArcMap.addLayer(dl);
+        //标注图层 用于显示
         mGraphicsLayer = new GraphicsLayer();
         mArcMap.addLayer(mGraphicsLayer);
         float size = getResources().getDisplayMetrics().density*15;
+        //轨迹点
         mDot = new SimpleMarkerSymbol(Color.RED, (int)size,
                 SimpleMarkerSymbol.STYLE.CIRCLE);
 
@@ -187,6 +196,7 @@ public class Main extends Activity implements
                 if(status == STATUS.INITIALIZED) {
                     SharedPreferences sp = getSharedPreferences("SP", MODE_PRIVATE);
                     mArcMap.setScale(5000);
+                    //默认把位置定在洪山广场中心
                     double x = sp.getFloat("position_x", (float)(114.3272189510811 + 114.34153905102028)/2);
                     double y = sp.getFloat("position_y", (float)(30.542809291954995 + 30.56307135368746)/2);
                     Point pt = GeometryEngine.project(x, y, mArcMap.getSpatialReference());
@@ -201,6 +211,8 @@ public class Main extends Activity implements
                 }
             }
         });
+
+        //地图被用户手动滑动后,停止自动跟随模式
         mArcMap.setOnPanListener(new OnPanListener() {
             @Override
             public void prePointerMove(float v, float v1, float v2, float v3) {
@@ -334,6 +346,7 @@ public class Main extends Activity implements
         return true;
     }
 
+    //标注搜索结果
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if(requestCode == SEARCH_ACTION && resultCode == RESULT_OK) {
@@ -475,6 +488,7 @@ public class Main extends Activity implements
         if(mLastDot == null || mArcMapLocation == null) {
             mLastDot = pt;
         } else {
+            //如果和上一个轨迹点相差10米以上,打上新的轨迹点
             pt = GeometryEngine.project(mArcMapLocation.getLongitude(),
                     mArcMapLocation.getLatitude(), sr);
             double distance = GeometryEngine.geodesicDistance(mLastDot, pt, sr, null);
@@ -581,12 +595,12 @@ public class Main extends Activity implements
         if(mode == mMode)
             return;
         switch (mode) {
-            case MODE_NORMAL:
+            case MODE_NORMAL: //百度地图模式
                 unregisterLocListener();
                 ((View)mArcMap.getParent()).setVisibility(View.GONE);
                 mArcMapLocation = null;
                 break;
-            case MODE_TRACE:
+            case MODE_TRACE: //ArcGIS地图模式
                 registerLocListener();
                 ((View)mArcMap.getParent()).setVisibility(View.VISIBLE);
                 clearDots();
@@ -595,6 +609,7 @@ public class Main extends Activity implements
         mMode = mode;
     }
 
+    //清除ArcGIS地图上的所有轨迹点
     private void clearDots() {
         int[] ids = mGraphicsLayer.getGraphicIDs();
         if(ids != null) {
@@ -606,6 +621,7 @@ public class Main extends Activity implements
         }
     }
 
+    //瓦拼图
     class MyTileProvider extends FileTileProvider {
 
         final static int SIZE = 256;
