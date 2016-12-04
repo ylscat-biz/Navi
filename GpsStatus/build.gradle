@@ -20,11 +20,11 @@ android {
 }
 
 dependencies {
-    compile project(':ShowcaseViewLibrary')
+//    compile project(':ShowcaseViewLibrary')
     compile files('libs/mpchartlib.jar')
 //    compile 'com.google.android.gms:play-services:8.4.0'
     compile 'org.jraf:android-switch-backport:1.4.0'
-    compile 'com.google.maps.android:android-maps-utils:0.2.1'
+//    compile 'com.google.maps.android:android-maps-utils:0.2.1'
 //    compile 'com.google.android.gms:play-services-ads:8.4.0'
 //    compile 'com.google.android.gms:play-services-identity:8.4.0'
 //    compile 'com.google.android.gms:play-services-gcm:8.4.0'

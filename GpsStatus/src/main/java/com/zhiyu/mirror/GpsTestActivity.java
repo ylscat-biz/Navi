@@ -56,7 +56,7 @@ import android.view.Window;
 import android.widget.CompoundButton;
 import android.widget.Toast;
 
-import com.github.espiandev.showcaseview.ShowcaseView;
+//import com.github.espiandev.showcaseview.ShowcaseView;
 import com.zhiyu.mirror.util.GpsTestUtil;
 import com.zhiyu.mirror.util.MathUtils;
 import com.zhiyu.mirror.view.ViewPagerMapBevelScroll;
@@ -99,9 +99,9 @@ public class GpsTestActivity extends ActionBarActivity
 
     ViewPagerMapBevelScroll mViewPager;
 
-    ShowcaseView sv;
-
-    ShowcaseView.ConfigOptions mOptions = new ShowcaseView.ConfigOptions();
+//    ShowcaseView sv;
+//
+//    ShowcaseView.ConfigOptions mOptions = new ShowcaseView.ConfigOptions();
 
     private LocationManager mService;
 
@@ -320,7 +320,7 @@ public class GpsTestActivity extends ActionBarActivity
     }
 
     private void checkTutorial(SharedPreferences settings) {
-        if (!settings.getBoolean(getString(R.string.pref_key_showed_v2_tutorial), false)) {
+        /*if (!settings.getBoolean(getString(R.string.pref_key_showed_v2_tutorial), false)) {
             // If GPS is started, stop to clear the screen (we will start it again at the end of this method)
             boolean lastStartState = mStarted;
             if (mStarted) {
@@ -354,7 +354,7 @@ public class GpsTestActivity extends ActionBarActivity
                     }
                 }, 500);
             }
-        }
+        }*/
     }
 
     private void checkKeepScreenOn(SharedPreferences settings) {
@@ -449,9 +449,9 @@ public class GpsTestActivity extends ActionBarActivity
         }
 
         // If the user is viewing the tutorial, we don't want to clutter the status screen, so return
-        if (sv != null && sv.isShown()) {
-            return;
-        }
+//        if (sv != null && sv.isShown()) {
+//            return;
+//        }
 
         for (GpsTestListener listener : mGpsTestListeners) {
             listener.onGpsStatusChanged(event, mStatus);
