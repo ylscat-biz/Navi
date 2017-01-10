@@ -17,7 +17,8 @@ public class Utils {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.getWindow().setBackgroundDrawable(new ColorDrawable(0));
         dialog.setContentView(R.layout.waiting);
-        dialog.setCancelable(false);
+        dialog.setCancelable(true);
+        dialog.setCanceledOnTouchOutside(false);
         return dialog;
     }
 }
