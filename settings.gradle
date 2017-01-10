@@ -1,1 +1,1 @@
-include ':app', ':ShowcaseViewLibrary', ':GpsStatus'
+include ':app', /*':ShowcaseViewLibrary',*/ ':GpsStatus', ':volley', ':image_picker'

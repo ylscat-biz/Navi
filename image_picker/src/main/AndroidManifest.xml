@@ -1,0 +1,12 @@
+<manifest package="gallery.picker"
+          xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <application
+        android:theme="@style/AppTheme"
+        android:largeHeap="true">
+        <activity android:name=".ImagePicker" android:exported="true"/>
+    </application>
+
+</manifest>
