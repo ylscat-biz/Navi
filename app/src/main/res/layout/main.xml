@@ -27,11 +27,13 @@
             android:textSize="20dp" />
 
         <ImageView
+            android:id="@+id/iv_team"
             android:layout_width="match_parent"
             android:layout_height="50dp"
             android:src="@drawable/group" />
 
         <TextView
+            android:id="@+id/tv_team"
             android:layout_width="match_parent"
             android:layout_height="0px"
             android:layout_weight="1"

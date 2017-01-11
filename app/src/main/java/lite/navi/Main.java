@@ -60,7 +60,6 @@ import com.esri.core.geometry.GeometryEngine;
 import com.esri.core.geometry.Point;
 import com.esri.core.geometry.SpatialReference;
 import com.esri.core.map.Graphic;
-import com.esri.core.symbol.PictureFillSymbol;
 import com.esri.core.symbol.PictureMarkerSymbol;
 import com.esri.core.symbol.SimpleMarkerSymbol;
 import com.zhiyu.mirror.GpsTestActivity;
@@ -101,6 +100,9 @@ public class Main extends Activity implements
     private static final int MODE_TRACE = 1;
     private int mMode = MODE_NORMAL;
 
+    private Double mDstLng, mDstLat, mStartLng, mStartLat;
+    private String mStartAddr, mStopAddr;
+
     private MapView mArcMap;
     private GraphicsLayer mGraphicsLayer;
     private SimpleMarkerSymbol mDot;
@@ -120,6 +122,7 @@ public class Main extends Activity implements
         setContentView(R.layout.main);
         findViewById(R.id.tv_settings).setOnClickListener(this);
         findViewById(R.id.iv_settings).setOnClickListener(this);
+        findViewById(R.id.iv_team).setOnClickListener(this);
 
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         mMapView = (TextureMapView) findViewById(R.id.bmapView);
@@ -296,6 +299,10 @@ public class Main extends Activity implements
                 moveToLocation(mLastLocation, -1);
                 break;
             case R.id.search:
+                if(mLastLocation == null) {
+                    Toast.makeText(this, "等待定位", Toast.LENGTH_SHORT).show();
+                    return;
+                }
                 Intent intent = new Intent(this, Search.class);
                 startActivityForResult(intent, SEARCH_ACTION);
                 break;
@@ -306,6 +313,10 @@ public class Main extends Activity implements
                     mMap.clear();
                 }
                 else {
+                    if(mLastLocation == null) {
+                        Toast.makeText(this, "等待定位", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
                     intent = new Intent(this, Search.class);
                     startActivityForResult(intent, SEARCH_ACTION);
                 }
@@ -335,6 +346,15 @@ public class Main extends Activity implements
             case R.id.iv_settings:
             case R.id.tv_settings:
                 intent = new Intent(this, GpsTestActivity.class);
+                startActivity(intent);
+                break;
+            case R.id.iv_team:
+            case R.id.tv_team:
+                if(mLastLocation == null) {
+                    Toast.makeText(this, "等待定位", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                intent = new Intent(this, Team.class);
                 startActivity(intent);
                 break;
         }
@@ -519,12 +539,18 @@ public class Main extends Activity implements
     private void routeTo(Marker marker) {
         showWaitingDialog();
 
-        BNRoutePlanNode sNode = new BNRoutePlanNode(mLastLocation.getLongitude(),
-                mLastLocation.getLatitude(), "当前位置", null,
+        mStartLng = mLastLocation.getLongitude();
+        mStartLat = mLastLocation.getLatitude();
+        BNRoutePlanNode sNode = new BNRoutePlanNode(mStartLng,
+                mStartLat, "当前位置", null,
                 BNRoutePlanNode.CoordinateType.BD09LL);
+        mStartAddr = mLastLocation.getStreet() + mLastLocation.getStreetNumber();
 
-        BNRoutePlanNode eNode = new BNRoutePlanNode(marker.getPosition().longitude,
-                marker.getPosition().latitude, marker.getTitle(), null,
+        mStopAddr = marker.getTitle();
+        mDstLat = marker.getPosition().latitude;
+        mDstLng = marker.getPosition().longitude;
+        BNRoutePlanNode eNode = new BNRoutePlanNode(mDstLng, mDstLat,
+                marker.getTitle(), null,
                 BNRoutePlanNode.CoordinateType.BD09LL);
         List<BNRoutePlanNode> list = new ArrayList<BNRoutePlanNode>();
         list.add(sNode);
@@ -568,6 +594,19 @@ public class Main extends Activity implements
     public void onJumpToNavigator() {
 //        dismissWaitingDialog();
         Intent intent = new Intent(this, Navi.class);
+        if(mStopAddr != null) {
+            intent.putExtra(Navi.EXTRA_START_LNG, mStartLng);
+            intent.putExtra(Navi.EXTRA_START_LAT, mStartLat);
+            intent.putExtra(Navi.EXTRA_DST_LNG, mDstLng);
+            intent.putExtra(Navi.EXTRA_DST_LAT, mDstLat);
+            intent.putExtra(Navi.EXTRA_START, mStartAddr);
+            intent.putExtra(Navi.EXTRA_STOP, mStopAddr);
+
+//            mDstLng = null;
+//            mDstLat = null;
+//            mStartAddr = null;
+//            mStopAddr = null;
+        }
         startActivity(intent);
     }
 
@@ -575,6 +614,12 @@ public class Main extends Activity implements
     public void onRoutePlanFailed() {
         dismissWaitingDialog();
         Toast.makeText(this, "路径规划失败", Toast.LENGTH_SHORT).show();
+        mDstLng = null;
+        mDstLat = null;
+        mStartLng = null;
+        mStartLat = null;
+        mStartAddr = null;
+        mStopAddr = null;
     }
 
     private void addTileLayer() {

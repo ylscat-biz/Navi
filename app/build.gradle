@@ -36,7 +36,7 @@ android {
         minSdkVersion 19
         targetSdkVersion 22
         versionCode 1
-        versionName "2.0"
+        versionName "2.4"
     }
 
     splits {
@@ -82,9 +82,12 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
+    provided files('bn_dex/classes.jar');
     compile 'org.apmem.tools:layouts:1.10@aar'
-    compile 'in.srain.cube:ptr-load-more:1.0.4'
     compile 'org.jraf:android-switch-backport:1.4.0'
     compile 'com.esri.arcgis.android:arcgis-android:10.2.8-1'
     compile project(':GpsStatus')
+    compile project(':volley')
+    compile project(':image_picker')
+    compile project(':ptr-load-more')
 }

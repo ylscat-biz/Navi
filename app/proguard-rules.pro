@@ -23,3 +23,6 @@
 
 -keep class com.esri.** {*;}
 -dontwarn com.esri.**
+
+-dontwarn jcifs.**
+-dontwarn org.codehaus.**

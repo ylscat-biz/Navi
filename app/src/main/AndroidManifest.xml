@@ -45,6 +45,9 @@
         <activity android:name="Search" android:screenOrientation="landscape"
             android:windowSoftInputMode="stateHidden|adjustPan"/>
 
+        <activity android:name=".Team" android:screenOrientation="landscape"
+            android:windowSoftInputMode="stateHidden|adjustPan"/>
+
         <activity android:name="Navi" android:screenOrientation="landscape"
             android:configChanges="screenSize|orientation"/>
 
