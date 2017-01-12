@@ -218,8 +218,14 @@ public class Navi extends Activity implements
         mLayer = new ItemizedOverlay(null, mMapView);
         mMapView.addOverlay(mLayer);
 
+        float dp = getResources().getDisplayMetrics().density;
+        int screenWidth = getResources().getDisplayMetrics().widthPixels;
+
         View bar = getLayoutInflater().inflate(R.layout.navi_bar, fl, false);
-        fl.addView(bar);
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) bar.getLayoutParams();
+        lp.gravity = Gravity.BOTTOM;
+        lp.setMargins(screenWidth/3, 0, 0, (int)((50*2 + 30)*dp));
+        fl.addView(bar, lp);
         bar.findViewById(R.id.mock).setOnClickListener(this);
         mShareButton = bar.findViewById(R.id.share);
         mShareButton.setOnClickListener(this);
@@ -230,13 +236,12 @@ public class Navi extends Activity implements
         LinearLayout group = new LinearLayout(this);
         hsv.addView(group, WRAP_CONTENT, WRAP_CONTENT);
         mMemberBar = group;
-        float dp = getResources().getDisplayMetrics().density;
-        int screenWidth = getResources().getDisplayMetrics().widthPixels;
-        final int MARGIN = (int)(70*dp);
+
         group.setHorizontalFadingEdgeEnabled(true);
+        final int MARGIN = (int)(70*dp);
         final int PADDING = (int)(5*dp);
         group.setPadding(PADDING, PADDING, PADDING, PADDING);
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+        lp = new FrameLayout.LayoutParams(
                 screenWidth*2/3 - 2*MARGIN,
                 WRAP_CONTENT, Gravity.BOTTOM | Gravity.RIGHT);
         lp.setMargins(0, 0, MARGIN, (int)(3*dp));
@@ -779,15 +784,14 @@ public class Navi extends Activity implements
     }
 
     private void setupGroupBar () {
-        View groupId = (View)mGroupIdView.getParent();
         if(mGroupId != null) {
-            groupId.setVisibility(View.VISIBLE);
+            mGroupIdView.setVisibility(View.VISIBLE);
             mGroupIdView.setText(mGroupId);
             mShareButton.setActivated(true);
             ((View)mMemberBar.getParent()).setVisibility(View.VISIBLE);
         }
         else {
-            groupId.setVisibility(View.INVISIBLE);
+            mGroupIdView.setVisibility(View.INVISIBLE);
             mShareButton.findViewById(R.id.share).setActivated(false);
             mMembers.clear();
             mMemberBar.removeAllViews();
